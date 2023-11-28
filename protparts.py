@@ -16,7 +16,7 @@ if __name__ == '__main__':
     args = argparser.parse_args()
     input_file = args.input_file
     threshold_c = args.threshold_c
-    threshold_rr = args.threshold_r
+    threshold_r = args.threshold_r
     num_partitions = args.num_partitions
     fmt = args.fmt
     output_file = args.output_file
