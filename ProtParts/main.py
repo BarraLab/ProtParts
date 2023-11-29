@@ -1,9 +1,8 @@
 from .Clustering import Clustering
 from .Measure import Measure
 from .Partitioning import Partitioning
-from .utils import read_seq, write_partition, write_cluster, reduce_redundancy
+from .utils import read_seq, write_partition, write_cluster, reduce_redundancy, init_logging
 from .settings import MAKEBLASTDB_EXEC, BLASTP_EXEC, TMP_DIR
-import logging
 
 def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, output_file, output_format, makeblastdb_exec=None, blastp_exec=None, tmp_dir=None):
     """
@@ -40,39 +39,44 @@ def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, out
         tmp_dir = TMP_DIR
     
     # set logging
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = init_logging(tmp_dir)
     
     # read sequences
     sequences = read_seq(sequence_file)
-    logging.info(f"Number of sequences: {len(sequences)}")
+    logger.info(f"Number of sequences: {len(sequences)}")
 
 
     # sequence similarity measurement
-    logging.info("Runing BLASTP...")
+    logger.debug("Runing BLASTP...")
     measure = Measure()
     measurement = measure.blastp(sequences, makeblastdb_exec, blastp_exec, tmp_dir, evalue=10, num_threads=4)
 
     # redundancy reduction
     if threshold_r is not None:
-        logging.info("Reducing redundancy...")
+        logger.debug("Reducing redundancy...")
+        logger.info(f"Threshold for redundancy reduction: {threshold_r}")
         sequences = reduce_redundancy(sequences, measurement, threshold_r)
-        logging.info(f"Number of sequences after redundancy reduction: {len(sequences)}")
+        logger.info(f"Number of sequences after redundancy reduction: {len(sequences)}")
 
     # clustering
-    logging.info(f"Clustering with graph {threshold_c}...")
+    logger.debug("Clustering with graph...")
+    logger.info(f"Threshold for clustering: {threshold_c}")
     clust = Clustering(threshold=threshold_c, method='graph', measurement_type='distance')
     cluster = clust.clustering(sequences, measurement)
-    logging.info(f"Number of clusters: {len(cluster)}")
+    logger.info(f"Number of clusters: {len(cluster)}")
 
 
     # partitioning
     if num_partitions and num_partitions > 0:
-        logging.info(f"Partitioning with {num_partitions} partitions...")
+        logger.debug("Partitioning...")
+        logger.info(f"Number of Partitions: {num_partitions}")
         partitioner = Partitioning(num_partitions=num_partitions, method='random')
         partitions = partitioner.random_partitioning(cluster)
-        logging.info("Writing partitions...")
+        logger.debug("Writing partitions...")
         write_partition(partitions, output_file, output_format, sequences=sequences, method='graph', threshold=threshold_c)
     else:
-        logging.info("Writing clusters...")
+        logger.debug("Writing clusters...")
         write_cluster(cluster, output_file, output_format, sequences=sequences, method='graph', threshold=threshold_c)
+    
+    logger.debug("Done.")
 

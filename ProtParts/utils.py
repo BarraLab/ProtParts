@@ -2,7 +2,7 @@ from Bio import SeqIO
 import json
 import warnings
 import operator
-
+import logging
 
 def read_seq(seq_file):
     """
@@ -165,6 +165,37 @@ def reduce_redundancy(sequences, measurement, threshold, operator=operator.lt):
 
     return sequences_r
 
+
+def init_logging(tmp_dir):
+    """
+    Initialize logging
+
+    Parameters
+    ----------
+    tmp_dir : str
+        Path to temporary directory
+    
+    Returns
+    -------
+    logger : logging.Logger
+        Logger
+    """
+    logger = logging.getLogger('protparts')
+    logger.setLevel(logging.DEBUG)
+
+    # create stream handler and set level to debug
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(stream_handler)
+
+    # create file handler and set level to info
+    file_handler = logging.FileHandler(f'{tmp_dir}/tmp.log')
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter('%(message)s'))
+    logger.addHandler(file_handler)
+
+    return logger
 
 
 
