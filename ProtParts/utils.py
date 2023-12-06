@@ -28,6 +28,33 @@ def read_seq(seq_file):
     return sequences
 
 
+def read_blastp(blastp_file):
+    """
+    Read blastp output with outfmt 6
+
+    Parameters
+    ----------
+    blastp_file : str
+        Path to blastp output file
+
+    Returns
+    -------
+    measurement : tuple
+        List of measurement (seq1, seq2, measurement)
+    """
+    measurement = []
+    first_hit = set()
+    with open(blastp_file, 'r') as f:
+        for line in f:
+            line = line.strip().split('\t')
+            if (line[0], line[1]) in first_hit:
+                continue
+            else:
+                first_hit.add((line[0], line[1]))
+                measurement.append((line[0], line[1], float(line[10])))
+    return measurement
+
+
 def write_partition(partition, out_file, fmt='json', **kwargs):
     """
     Write partition to file
@@ -119,7 +146,7 @@ def write_cluster(cluster, out_file, fmt='json', **kwargs):
         raise ValueError(f"Unknown output format: {fmt}")
 
 
-def reduce_redundancy(sequences, measurement, threshold, operator=operator.lt):
+def hobohm1(sequences, measurement, threshold, op=operator.le, reduce_redundancy=True):
     """
     Redundancy reduction
 
@@ -139,32 +166,37 @@ def reduce_redundancy(sequences, measurement, threshold, operator=operator.lt):
     """
     # hobohm1
     sequences_id_s = sorted(sequences, key=lambda x:len(sequences[x].seq), reverse=True)
-    measurement_dict = {(seq1, seq2):value for seq1, seq2, value in measurement}
+    measurement_dict = {(seq1, seq2):measure for seq1, seq2, measure in measurement}
 
-    unqiue_seq = set()
-    for qseq in sequences_id_s:
+    unique_seq = dict()
+    for qseq_id in sequences_id_s:
         keep = True
-        for useq_id in unqiue_seq:
-            if (qseq.id, useq_id) in measurement_dict:
-                measure = measurement_dict[(qseq.id, useq_id)]
-            elif (useq_id, qseq.id) in measurement_dict:
-                measure = measurement_dict[(useq_id, qseq.id)]
+        if len(unique_seq) == 0:
+            unique_seq[qseq_id] = []
+            continue
+        for useq_id in unique_seq:
+            if (qseq_id, useq_id) in measurement_dict:
+                measure = measurement_dict[(qseq_id, useq_id)]
+            # elif (useq_id, qseq_id) in measurement_dict:
+            #     measure = measurement_dict[(useq_id, qseq_id)]
             else:
                 measure = 11
             
-            if operator(measure, self.threshold):
+            if op(measure, threshold):
                 keep = False
+                unique_seq[useq_id].append(qseq_id)
                 break
             else:
                 keep = True
         
         if keep:
-            unqiue_seq.add(qseq.id)
-    
-    sequences_r = {seq_id:seq for seq_id, seq in sequences.items() if seq_id in unqiue_seq}
+            unique_seq[qseq_id] = []
 
-    return sequences_r
-
+    if reduce_redundancy:
+        sequences_r = {seq_id:sequences[seq_id] for seq_id in unique_seq}
+        return sequences_r
+    else:
+        return unique_seq
 
 def init_logging(tmp_dir):
     """

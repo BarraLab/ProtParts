@@ -1,7 +1,7 @@
 import networkx as nx
 import operator
 from sklearn.metrics import silhouette_score, silhouette_samples
-
+from .utils import hobohm1
 
 class Cluster:
 
@@ -217,9 +217,9 @@ class Clustering:
             Clustered sequences
         """
         if self.measurement_type == 'distance':
-            op = operator.lt
+            op = operator.le
         elif self.measurement_type == 'similarity':
-            op = operator.gt
+            op = operator.ge
 
         if self.method == 'graph':
             clusters = self._graph(sequences, measurement, op)
@@ -277,26 +277,8 @@ class Clustering:
         result : Cluster
             Clustered sequences
         """
-        # sort sequences by length in descending order
-        sequences_s = sorted(sequences, key=lambda x:len(sequences[x].seq), reverse=True)
-        measurement_dict = {(seq1, seq2):value for seq1, seq2, value in measurement}
-
-        cluster = dict()
-        cluster[sequences_s[0].id] = []
-        for qseq in sequences_s:
-            keep = True
-            for useq_id in cluster.keys():
-                measure = measurement_dict[(qseq.id, useq_id)]
-                if op(measure, self.threshold):
-                    keep = False
-                    cluster[useq_id].append(qseq.id)
-                    break
-                else:
-                    keep = True
-            if keep:
-                cluster[qseq.id] = []
         
-        result = {idx:[key]+value for idx, (key, value) in enumerate(cluster.items())}
+        result = hobohm1(sequences, measurement, self.threshold, op, reduce_redundancy=False)
 
         return Cluster(result)
 

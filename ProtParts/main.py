@@ -1,7 +1,7 @@
 from .Clustering import Clustering
 from .Measure import Measure
 from .Partitioning import Partitioning
-from .utils import read_seq, write_partition, write_cluster, reduce_redundancy, init_logging
+from .utils import read_seq, write_partition, write_cluster, hobohm1, init_logging
 from .settings import MAKEBLASTDB_EXEC, BLASTP_EXEC, TMP_DIR
 
 def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, output_file, output_format, makeblastdb_exec=None, blastp_exec=None, tmp_dir=None):
@@ -55,7 +55,7 @@ def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, out
     if threshold_r is not None:
         logger.debug("Reducing redundancy...")
         logger.info(f"Threshold for redundancy reduction: {threshold_r}")
-        sequences = reduce_redundancy(sequences, measurement, threshold_r)
+        sequences = hobohm1(sequences, measurement, threshold_r, reduce_redundancy=True)
         logger.info(f"Number of sequences after redundancy reduction: {len(sequences)}")
 
     # clustering

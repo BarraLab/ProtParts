@@ -1,6 +1,7 @@
 import subprocess
 import os
 import shutil
+from .utils import read_blastp
 
 class Measure:
 
@@ -56,11 +57,7 @@ class Measure:
         
         # read blastp output
         # blastp outfmt 6: qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore
-        measurement = []
-        with open(tmp_blast_file, 'r') as f:
-            for line in f:
-                line = line.strip().split('\t')
-                measurement.append((line[0], line[1], float(line[10])))
+        measurement = read_blastp(tmp_blast_file)
         
         # remove temporary directory
         # shutil.rmtree(tmp_dir)
