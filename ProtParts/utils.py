@@ -55,6 +55,28 @@ def read_blastp(blastp_file):
     return measurement
 
 
+def remove_duplicate(sequences):
+    """
+    Remove duplicate sequences
+
+    Parameters
+    ----------
+    sequences : dict
+        Dict of sequences
+    
+    Returns
+    -------
+    sequences : dict
+        Dict of sequences
+    """
+    sequences_nodup = dict()
+    sequences_uniq = set()
+    for seq_id, seq in sequences.items():
+        if seq.seq not in sequences_uniq:
+            sequences_uniq.add(seq.seq)
+            sequences_nodup[seq_id] = seq
+    return sequences_nodup
+
 def write_partition(partition, out_file, fmt='json', **kwargs):
     """
     Write partition to file
