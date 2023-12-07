@@ -1,6 +1,7 @@
 import networkx as nx
 import operator
-from sklearn.metrics import silhouette_score, silhouette_samples
+from sklearn.metrics import silhouette_samples
+import numpy as np
 from .utils import hobohm1
 
 class Cluster:
@@ -122,44 +123,90 @@ class Cluster:
         return result
  
     
-    def evaluate_matrix(self, method=None, matrix=None):
-        """
-        Evaluate the cluster based on similarity/distance matrix
+    # def list_all(self):
+    #     """
+    #     Returns
+    #     -------
+    #     result : list
+    #         List of all data
+    #     """
+    #     result = []
+    #     for c in self.clusters.values():
+    #         result.extend(c)
+    #     return result
+    
 
+    def index(self, data=None):
+        """
         Parameters
         ----------
-        method : str
-            Evaluation method
-        matrix : np.array
-            Similarity/Distance matrix
+        data : str
+            Sequence id
         
         Returns
         -------
-        metric : float
-            Evaluation result
+        idx : int
+            Cluster index of the data
         """
+        inverted = {v:k for k, values in self.clusters.items() for v in values}
+        if data is None:
+            idx = inverted
+        elif data not in inverted:
+            raise ValueError(f"Invalid data: {data}")
+        else:
+            idx = inverted[data]
+        return idx
 
-        if method == 'sihouette':
-            return self._silhouette(matrix)
+
+
+    # def evaluate_matrix(self, method=None, matrix=None):
+    #     """
+    #     Evaluate the cluster based on similarity/distance matrix
+
+    #     Parameters
+    #     ----------
+    #     method : str
+    #         Evaluation method
+    #     matrix : np.array
+    #         Similarity/Distance matrix
+        
+    #     Returns
+    #     -------
+    #     metric : float
+    #         Evaluation result
+    #     """
+
+    #     if method == 'sihouette':
+    #         return self._silhouette(matrix)
 
     
-    def _silhouette(self, matrix):
+    def silhouette(self, measurement):
         """
         Silhouette score
 
         Parameters
         ----------
-        matrix : np.array
-            Similarity/Distance matrix
+        measurement : tuple
+            List of measurement (seq1, seq2, measurement)
         
         Returns
         -------
         metric : float
             Silhouette score
         """
-        pass
+        data_list = list(self.index().keys())
+        data_label = list(self.index().values())
+        pivot = np.ones((len(data_list), len(data_list))) * 11
+        data_dict = dict(zip(data_list, range(len(data_list))))
+        for seq1, seq2, measure in measurement:
+            i = data_dict[seq1]
+            j = data_dict[seq2]
+            pivot[i, j] = measure
+        
+        sample_silhouette_values = silhouette_samples(pivot, data_label, metric='precomputed')
+        metric = np.mean(sample_silhouette_values)
 
-
+        return metric, sample_silhouette_values
 
 
 class Clustering:

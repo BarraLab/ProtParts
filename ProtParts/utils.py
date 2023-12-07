@@ -3,6 +3,11 @@ import json
 import warnings
 import operator
 import logging
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import seaborn as sns
+import os
+from string import Template
 
 def read_seq(seq_file):
     """
@@ -76,6 +81,7 @@ def remove_duplicate(sequences):
             sequences_uniq.add(seq.seq)
             sequences_nodup[seq_id] = seq
     return sequences_nodup
+
 
 def write_partition(partition, out_file, fmt='json', **kwargs):
     """
@@ -220,6 +226,7 @@ def hobohm1(sequences, measurement, threshold, op=operator.le, reduce_redundancy
     else:
         return unique_seq
 
+
 def init_logging(tmp_dir):
     """
     Initialize logging
@@ -252,4 +259,101 @@ def init_logging(tmp_dir):
     return logger
 
 
+def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes):
+    """
+    Plot silhouettes
+
+    Parameters
+    ----------
+    clusters : Cluster
+        Cluster object
+    sample_silhouette_values : np.array
+        Silhouette samples
+    mean_silhouettes : float
+        Mean silhouette
+    """
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    y_lower = 10
+
+    cluster_labels = [i for i in clusters.index().values()]
+    n_clusters = len(clusters)
+    for i in range(n_clusters):
+        # i_cluster = n_clusters[i]
+        # Aggregate the silhouette scores for samples belonging to
+        # cluster i, and sort them
+        cluster_idx = [j for j, x in enumerate(cluster_labels) if x == i]
+        ith_cluster_silhouette_values = sample_silhouette_values[cluster_idx]
+
+        ith_cluster_silhouette_values.sort()
+
+        size_cluster_i = ith_cluster_silhouette_values.shape[0]
+        
+        if size_cluster_i > 10:
+            ax.text(-1.05, y_lower + 0.5 * size_cluster_i, str(i), fontsize=5)
+            y_upper = y_lower + size_cluster_i
+
+            color = cm.nipy_spectral(float(i) / n_clusters)
+            ax.fill_betweenx(list(range(y_lower, y_upper)), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
+
+            # Compute the new y_lower for next plot
+            y_lower = y_upper + 10  # 10 for the 0 samples
+
+    ax.set_title('Silhouette plot per sample')
+    ax.set_xlabel("Silhouette coefficient")
+    ax.set_ylabel("Cluster label")
+
+    # The vertical line for average silhouette score of all the values
+    ax.axvline(x=mean_silhouettes, color="red", linestyle="--")
+
+    ax.set_yticks([])  # Clear the yaxis labels / tick
+
+    return fig, ax
+
+
+def create_report(clusters, measurement, output_file, **kwargs):
+    """
+    Create report
+
+    Parameters
+    ----------
+    clusters : Cluster
+        Cluster object
+    measurement : tuple
+        List of measurement (seq1, seq2, measurement)
+    output_dir : str
+        Path to output directory
+    """
+
+    # load html template
+    template_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'template', 'template.html')
+    with open(template_file, 'r') as f:
+        template = Template(f.read())
+    
+    output_dir = os.path.dirname(output_file)
+    plt.tight_layout()
+
+    # draw histogram of cluster size
+    cluster_size_list = list(map(len, clusters.clusters.values()))
+    fig, ax = plt.subplots()
+    sns.histplot(cluster_size_list, ax=ax, bins=30, color='tab:blue', edgecolor='k', linewidth=1, alpha=1, kde=False)
+    ax.set_xlabel('Cluster size')
+    ax.set_ylabel('Number of clusters')
+    ax.set_title('Distribution of cluster size')
+    fig.savefig(os.path.join(output_dir, 'cluster_size.png'), dpi=300)
+
+    # draw silhouettes
+    mean_silhouettes, sample_silhouette_values = clusters.silhouette(measurement)
+    fig, ax = plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes)
+    fig.savefig(os.path.join(output_dir, 'silhouette.png'), dpi=300)
+    
+    template = template.substitute(threshold_c=kwargs['threshold_c'], threshold_r=kwargs['threshold_r'], num_partitions=kwargs['num_partitions'], 
+                                   num_seq=kwargs['num_seq'], num_seq_nodup=kwargs['num_seq_nodup'], num_seq_nodup_r=clusters.num_data(by='sum'), num_clusters=len(clusters), 
+                                   result_file=os.path.basename(output_file), mean_silhouette=mean_silhouettes.round(3),
+                                   path_to_figure_1='cluster_size.png', 
+                                   path_to_figure_2='silhouette.png')
+
+    # write html
+    with open(os.path.join(output_dir, 'report.html'), 'w') as f:
+        f.write(template)
 

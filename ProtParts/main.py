@@ -1,7 +1,7 @@
 from .Clustering import Clustering
 from .Measure import Measure
 from .Partitioning import Partitioning
-from .utils import read_seq, write_partition, write_cluster, hobohm1, init_logging, remove_duplicate
+from .utils import read_seq, write_partition, write_cluster, hobohm1, init_logging, remove_duplicate, create_report
 from .settings import MAKEBLASTDB_EXEC, BLASTP_EXEC, TMP_DIR
 
 def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, output_file, output_format, makeblastdb_exec=None, blastp_exec=None, tmp_dir=None):
@@ -43,12 +43,14 @@ def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, out
     
     # read sequences
     sequences = read_seq(sequence_file)
-    logger.info(f"Number of sequences: {len(sequences)}")
+    num_seq = len(sequences)
+    logger.info(f"Number of sequences: {num_seq}")
 
     # remove duplicate sequences
     logger.debug("Removing duplicate sequences...")
     sequences = remove_duplicate(sequences)
-    logger.info(f"Number of unique sequences: {len(sequences)}")
+    num_seq_nodup = len(sequences)
+    logger.info(f"Number of unique sequences: {num_seq_nodup}")
 
 
     # sequence similarity measurement
@@ -70,7 +72,6 @@ def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, out
     cluster = clust.clustering(sequences, measurement)
     logger.info(f"Number of clusters: {len(cluster)}")
 
-
     # partitioning
     if num_partitions and num_partitions > 0:
         logger.debug("Partitioning...")
@@ -82,6 +83,10 @@ def clust_partition(sequence_file, threshold_c, threshold_r, num_partitions, out
     else:
         logger.debug("Writing clusters...")
         write_cluster(cluster, output_file, output_format, sequences=sequences, method='graph', threshold=threshold_c)
+    
+    # create report
+    logger.debug("Creating report...")
+    create_report(cluster, measurement, output_file, threshold_c=threshold_c, threshold_r=threshold_r, num_partitions=num_partitions, num_seq=num_seq, num_seq_nodup=num_seq_nodup)
     
     logger.debug("Done.")
 
