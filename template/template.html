@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProtParts-1.0 Results</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+  .container {
+    width: 90%;
+    margin: auto;
+  }
+  .summary {
+    margin-bottom: 20px;
+  }
+  .summary h2 {
+    margin-bottom: 10px;
+  }
+  .table {
+    margin-bottom: 20px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 50%;
+  }
+  .download-link {
+    margin-bottom: 20px;
+  }
+  .figures {
+    display: flex;
+    justify-content: space-between;
+  }
+  .figure {
+    width: 49%;
+  }
+  img {
+    width: 100%;
+    height: auto;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="summary">
+    <h2>Parameters</h2>
+    <div class="table">
+      <table>
+        <tr>
+          <td>Threshold (reduandancy reduction)</td>
+          <td>${threshold_r}</td>
+        </tr>
+        <tr>
+          <td>Threshold (clustering)</td>
+          <td>${threshold_c}</td>
+        </tr>
+        <tr>
+          <td>No. of partitions</td>
+          <td>${num_partitions}</td>
+        </tr>
+      </table>
+    </div>
+    <h2>Reuslts</h2>
+    <div class="table">
+      <table>
+        <tr>
+          <td>No. of sequences</td>
+          <td>${num_seq}</td>
+        </tr>
+        <tr>
+          <td>No. of sequences (unique)</td>
+          <td>${num_seq_nodup}</td>
+        </tr>
+        <tr>
+          <td>No. of sequences (after reduandancy reduction)</td>
+          <td>${num_seq_nodup_r}</td>
+        </tr>
+        <tr>
+          <td>No. of clusters</td>
+          <td>${num_clusters}</td>
+        </tr>
+        <tr>
+          <td>Mean Silhouette coefficient</td>
+          <td>${mean_silhouette}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div class="download-link">
+    <a href="${result_file}" download>Download result file</a>
+  </div>
+  <div class="figures">
+    <div class="figure">
+      <h2>Distribution of cluster size</h2>
+      <img src="${path_to_figure_1}" alt="Figure 1">
+    </div>
+    <div class="figure">
+      <h2>Silhouette coefficient per sample</h2>
+      <img src="${path_to_figure_2}" alt="Figure 2">
+    </div>
+  </div>
+</div>
+</body>
+</html>
