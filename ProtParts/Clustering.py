@@ -199,9 +199,10 @@ class Cluster:
         pivot = np.ones((len(data_list), len(data_list))) * 11
         data_dict = dict(zip(data_list, range(len(data_list))))
         for seq1, seq2, measure in measurement:
-            i = data_dict[seq1]
-            j = data_dict[seq2]
-            pivot[i, j] = measure
+            if (seq1 in data_dict) and (seq2 in data_dict):
+                i = data_dict[seq1]
+                j = data_dict[seq2]
+                pivot[i, j] = measure
         
         sample_silhouette_values = silhouette_samples(pivot, data_label, metric='precomputed')
         metric = np.mean(sample_silhouette_values)
@@ -298,7 +299,7 @@ class Clustering:
         G.add_nodes_from(nodes)
 
         # filter out self-self measurement and based on threshold
-        measurement = list(filter(lambda x:(x[0] != x[1]) and (op(x[2], self.threshold)), measurement))
+        measurement = list(filter(lambda x:(x[0] != x[1]) and (x[0] in sequences) and (x[1] in sequences) and (op(x[2], self.threshold)), measurement))
         
         # add edges
         G.add_weighted_edges_from(measurement)
