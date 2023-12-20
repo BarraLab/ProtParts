@@ -343,13 +343,24 @@ def create_report(clusters, measurement, output_file, **kwargs):
     fig.savefig(os.path.join(output_dir, 'cluster_size.png'), dpi=300)
 
     # draw silhouettes
-    mean_silhouettes, sample_silhouette_values = clusters.silhouette(measurement)
-    fig, ax = plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes)
-    fig.savefig(os.path.join(output_dir, 'silhouette.png'), dpi=300)
+    if len(clusters) < 2 or len(clusters) == clusters.num_data(by='sum'):
+        mean_silhouettes = "NA"
+        # Create an empty plot
+        fig, ax= plt.subplots(figsize=(6, 6))
+        ax.text(0.5, 0.5, f"Silhouette coefficient requires\n at least 2 clusters\n and at most {clusters.num_data(by='sum')-1} clusters",
+                horizontalalignment='center', verticalalignment='center',
+                linespacing=2, transform=plt.gca().transAxes)
+        ax.set_yticks([])
+        fig.savefig(os.path.join(output_dir, 'silhouette.png'), dpi=300)
+    else:
+        mean_silhouettes, sample_silhouette_values = clusters.silhouette(measurement)
+        mean_silhouettes = mean_silhouettes.round(3)
+        fig, ax = plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes)
+        fig.savefig(os.path.join(output_dir, 'silhouette.png'), dpi=300)
     
     template = template.substitute(threshold_c=kwargs['threshold_c'], threshold_r=kwargs['threshold_r'], num_partitions=kwargs['num_partitions'], 
                                    num_seq=kwargs['num_seq'], num_seq_nodup=kwargs['num_seq_nodup'], num_seq_nodup_r=clusters.num_data(by='sum'), num_clusters=len(clusters), 
-                                   result_file=os.path.basename(output_file), mean_silhouette=mean_silhouettes.round(3),
+                                   result_file=os.path.basename(output_file), mean_silhouette=mean_silhouettes,
                                    path_to_figure_1='cluster_size.png', 
                                    path_to_figure_2='silhouette.png')
 
