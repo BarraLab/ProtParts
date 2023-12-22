@@ -1,3 +1,7 @@
+Bio==1.6.0
 biopython==1.81
-scikit-learn==1.2.2
+matplotlib==3.7.1
 networkx==3.1
+numpy==1.24.3
+scikit_learn==1.2.2
+seaborn==0.13.0
