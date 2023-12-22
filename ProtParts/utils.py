@@ -278,6 +278,7 @@ def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes):
 
     cluster_labels = [i for i in clusters.index().values()]
     n_clusters = len(clusters)
+    cluster_colors = sns.cubehelix_palette(n_colors=n_clusters, as_cmap=False)[::-1]
     for i in range(n_clusters):
         # i_cluster = n_clusters[i]
         # Aggregate the silhouette scores for samples belonging to
@@ -293,7 +294,8 @@ def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes):
             ax.text(-1.05, y_lower + 0.5 * size_cluster_i, str(i), fontsize=5)
             y_upper = y_lower + size_cluster_i
 
-            color = cm.nipy_spectral(float(i) / n_clusters)
+            #color = cm.nipy_spectral(float(i) / n_clusters)
+            color = cluster_colors[i]
             ax.fill_betweenx(list(range(y_lower, y_upper)), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
 
             # Compute the new y_lower for next plot
@@ -304,7 +306,7 @@ def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes):
     ax.set_ylabel("Cluster label")
 
     # The vertical line for average silhouette score of all the values
-    ax.axvline(x=mean_silhouettes, color="red", linestyle="--")
+    ax.axvline(x=mean_silhouettes, color="#030F4F", linestyle="--")
 
     ax.set_yticks([])  # Clear the yaxis labels / tick
 
@@ -336,11 +338,11 @@ def create_report(clusters, measurement, output_file, **kwargs):
     # draw histogram of cluster size
     cluster_size_list = list(map(len, clusters.clusters.values()))
     fig, ax = plt.subplots()
-    sns.histplot(cluster_size_list, ax=ax, bins=30, color='tab:blue', edgecolor='k', linewidth=1, alpha=1, kde=False)
+    sns.histplot(cluster_size_list, ax=ax, bins=30, color='#edd1cb', edgecolor='k', linewidth=1, alpha=1, kde=False)
     ax.set_xlabel('Cluster size')
     ax.set_ylabel('Number of clusters')
     ax.set_title('Distribution of cluster size')
-    fig.savefig(os.path.join(output_dir, 'cluster_size.png'), dpi=300)
+    fig.savefig(os.path.join(output_dir, 'cluster_size.png'), dpi=300, transparent=True, bbox_inches='tight')
 
     # draw silhouettes
     if len(clusters) < 2 or len(clusters) == clusters.num_data(by='sum'):
@@ -356,7 +358,7 @@ def create_report(clusters, measurement, output_file, **kwargs):
         mean_silhouettes, sample_silhouette_values = clusters.silhouette(measurement)
         mean_silhouettes = mean_silhouettes.round(3)
         fig, ax = plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes)
-        fig.savefig(os.path.join(output_dir, 'silhouette.png'), dpi=300)
+        fig.savefig(os.path.join(output_dir, 'silhouette.png'), dpi=300, transparent=True, bbox_inches='tight')
     
     template = template.substitute(threshold_c=kwargs['threshold_c'], threshold_r=kwargs['threshold_r'], num_partitions=kwargs['num_partitions'], 
                                    num_seq=kwargs['num_seq'], num_seq_nodup=kwargs['num_seq_nodup'], num_seq_nodup_r=clusters.num_data(by='sum'), num_clusters=len(clusters), 
