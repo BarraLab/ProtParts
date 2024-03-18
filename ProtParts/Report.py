@@ -103,7 +103,7 @@ class Report():
             List of figure paths: [(threshold, fig_path_1, fig_path_2, output_file*, sizebar_file*), ...]
         """
 
-        self.report += "<h2>Analysis</h2>\n"
+        self.report += "<h2>Analysis</h2>\n<hr>\n"
 
         # load the template
         with open('template/analysis.html', 'r') as f:
