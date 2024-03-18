@@ -100,7 +100,7 @@ class Report():
         Parameters
         ----------
         figures : list
-            List of figure paths: [(threshold, fig_path_1, fig_path_2), ...]
+            List of figure paths: [(threshold, fig_path_1, fig_path_2, output_file*, sizebar_file*), ...]
         """
 
         self.report += "<h2>Analysis</h2>\n"
@@ -108,6 +108,17 @@ class Report():
         # load the template
         with open('template/analysis.html', 'r') as f:
             template = Template(f.read())
+
+        if len(figures[0]) == 5:
+            html_figure = f"""
+            <div class="grid">
+            <figure>
+            <h3>Maximum cluster size at different thresholds</h3>
+            <img src="{figures[0][4]}" alt="Barplot of max cluster size">
+            </figure>
+            </div>\n
+            """
+            self.report += html_figure
         
         for figs in figures:
             threshold = figs[0]

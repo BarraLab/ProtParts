@@ -134,7 +134,7 @@ class Partitioning:
     """
     Partitioning class
     """
-    def __init__(self, num_partitions, method='random'):
+    def __init__(self, num_partitions, num_sequences, method='random'):
         """
         Parameters
         ----------
@@ -144,6 +144,7 @@ class Partitioning:
             Partitioning method
         """
         self.num_partitions = num_partitions
+        self.num_sequences = num_sequences
         self.method = method
 
     
@@ -169,7 +170,10 @@ class Partitioning:
         
         #partitions = Partition(num_partitions=self.num_partitions)
         partitions = {i:dict() for i in range(self.num_partitions)}
-        partitions_alloc_size = self._even_split(clusters)
+        num_sample = clusters.num_data(by='sum')
+        if num_sample != self.num_sequences:
+            raise ValueError(f"Number of sequences in clusters {num_sample} is different from the number of sequences {self.num_sequences}")
+        partitions_alloc_size = self._even_split()
         done_list = []
         # print(partitions_alloc_size)  
 
@@ -206,25 +210,33 @@ class Partitioning:
         return partitions
 
     
-    def _even_split(self, cluster):
+    def _even_split(self):
         """
         Evenly split clusters into partitions
 
-        Parameters
-        ----------
-        cluster : Cluster
-            Cluster object
-        
         Returns
         -------
         par_size : dict
             Dict of partition size
         """
-        num_sample = cluster.num_data(by='sum')
-        par_size = [int(num_sample/self.num_partitions)]*self.num_partitions
-        for i in range(num_sample%self.num_partitions):
+        par_size = [int(self.num_sequences/self.num_partitions)]*self.num_partitions
+        for i in range(self.num_sequences%self.num_partitions):
             par_size[i] += 1
         return {i:size for i, size in enumerate(par_size)}
+    
+
+    def partition_size(self):
+        """
+        Calculate partition size
+
+        Returns
+        -------
+        partition_size : dict
+            Dict of number of sequences in each partition
+        """
+        return self._even_split()
+
+
 
 
 

@@ -4,7 +4,7 @@ from ProtParts.main import clust_partition
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description="Protein clustering and partitioning", formatter_class=argparse.RawTextHelpFormatter)
     argparser.add_argument('-i', action='store', dest='input_file', required=True, help="Input fasta file")
-    argparser.add_argument('-c', action='store', dest='threshold_c', required=True, type=float, nargs='+', help="Threshold for clustering")
+    argparser.add_argument('-c', action='store', dest='threshold_c', type=float, nargs='+', help="Threshold for clustering")
     argparser.add_argument('-r', action='store', dest='threshold_r', type=float, default=None, help="Threshold for sequence redundancy reduction.\nNone: skip redundancy reduction\n(Default: None)")
     argparser.add_argument('-p', action='store', dest='num_partitions', type=int, help="Number of partitions. 0: skip partitioning")
     argparser.add_argument('-f', action='store', dest='fmt', default='JSON', choices=['JSON', 'TXT', 'CSV', 'FASTA'], help="Output format\n(Default: JSON)")

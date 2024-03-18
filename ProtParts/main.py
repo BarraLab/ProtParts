@@ -2,7 +2,7 @@ from .Clustering import Clustering
 from .Measure import Measure
 from .Partitioning import Partitioning
 from .Report import Report
-from .utils import read_seq, write_partition, write_cluster, hobohm1, init_logging, remove_duplicate, draw_figures #create_report
+from .utils import read_seq, write_partition, write_cluster, hobohm1, init_logging, remove_duplicate, draw_figures, plot_sizebar #create_report
 from .settings import MAKEBLASTDB_EXEC, BLASTP_EXEC, TMP_DIR
 import zipfile
 import os
@@ -75,44 +75,99 @@ def clust_partition(args):
     
     # get the absolute path of the output file
     output_dir = os.path.abspath(args.output_dir)
-
-    # clustering
+    
+    # clustering and partitioning
     logger.debug("Clustering with graph...")
-    clustering_results = [['Threshold', '# sequences', '# unique sequences', '# remaining sequences', '# clusters', 'Silhouette score', 'Download']]
     file_results = []
-    for t_c in args.threshold_c:
+    clustering_results = [['Threshold', '# sequences', '# unique sequences', '# remaining sequences', '# clusters', 'Silhouette score', 'Download']]
 
-        logger.info(f"Threshold for clustering: {t_c}")
-        clust = Clustering(threshold=t_c, method='graph', measurement_type='distance')
-        cluster = clust.clustering(sequences, measurement)
-        logger.info(f"Number of clusters: {len(cluster)}")
+    # clustering based on the number of partitions
+    if args.threshold_c is None:
+        logger.debug("Clustering based on the number of partitions...")
 
-        # partitioning
-        #output_name = os.path.basename(input_file).split('.')[0] + f"_{t_c}." + args.fmt.lower()
-        output_file = os.path.join(output_dir, input_name + f"_{t_c}.{args.fmt.lower()}")
-        if args.num_partitions and args.num_partitions > 0:
-            logger.debug("Partitioning...")
-            logger.info(f"Number of Partitions: {args.num_partitions}")
-            partitioner = Partitioning(num_partitions=args.num_partitions, method='random')
-            partitions = partitioner.random_partitioning(cluster)
-            logger.debug("Writing partitions...")
-            write_partition(partitions, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
-        else:
-            logger.debug("Writing clusters...")
-            write_cluster(cluster, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
+        if args.num_partitions is None:
+            raise ValueError("Number of partitions is not specified.")
+        size_thres_dict = {}
+        
+        partitioner = Partitioning(num_partitions=args.num_partitions, num_sequences=len(sequences), method='random')
+        partition_size = partitioner.partition_size()
+        logger.info(f"Partition size: {partition_size}")
+        max_partition_size = partition_size[max(partition_size, key=partition_size.get)]
+        
+        for exp in range(1, 21):
+            t_c = 10 ** (-exp)
+            logger.debug(f"Threshold for clustering: {t_c}")
+            clust = Clustering(threshold=t_c, method='graph', measurement_type='distance')
+            cluster = clust.clustering(sequences, measurement)
+            logger.debug(f"Number of clusters: {len(cluster)}")
 
-        # evaluate silhouette score
-        logger.debug("Evaluating silhouette score...")
-        silhouette, _ = cluster.silhouette(measurement)
-        logger.info(f"Silhouette score: {silhouette:.3f}")
+            # max size of clusters
+            max_cluster_size = cluster.num_data(by='max')
+            logger.debug(f"Max size of clusters: {max_cluster_size}")
+            size_thres_dict[t_c] = max_cluster_size
 
-        row = [t_c, num_seq, num_seq_nodup, len(sequences), len(cluster), silhouette.round(3), output_file]
-        clustering_results.append(row)
+            if max_cluster_size <= max_partition_size:
+                partitions = partitioner.random_partitioning(cluster)
+                
+                logger.debug("Writing partitions...")
+                output_file = os.path.join(output_dir, input_name + f"_{t_c}.{args.fmt.lower()}")
+                write_partition(partitions, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
+                
+                logger.debug("Evaluating silhouette score...")
+                silhouette, _ = cluster.silhouette(measurement)
+                logger.info(f"Silhouette score: {silhouette:.3f}")
+                
+                row = [t_c, num_seq, num_seq_nodup, len(sequences), len(cluster), silhouette.round(3), output_file]
+                clustering_results.append(row)
 
-        # draw figures
+                break
+        
+        # draw figure 1: threshold vs max cluster size
+        logger.debug("Drawing figure 1...")
+        sizebar_file = plot_sizebar(size_thres_dict, max_partition_size, output_dir)
+
+        # draw figure 2: historgram vs silhouette score
         logger.debug("Drawing figures...")
         hist_file, silhouette_file = draw_figures(cluster, measurement, output_dir, threshold=t_c)
-        file_results.append([t_c, hist_file, silhouette_file, output_file])
+        file_results.append([t_c, hist_file, silhouette_file, output_file, sizebar_file])
+        
+    else:
+
+        # clustering based on thresholds
+
+        for t_c in args.threshold_c:
+
+            logger.info(f"Threshold for clustering: {t_c}")
+            clust = Clustering(threshold=t_c, method='graph', measurement_type='distance')
+            cluster = clust.clustering(sequences, measurement)
+            logger.info(f"Number of clusters: {len(cluster)}")
+
+            # partitioning
+            #output_name = os.path.basename(input_file).split('.')[0] + f"_{t_c}." + args.fmt.lower()
+            output_file = os.path.join(output_dir, input_name + f"_{t_c}.{args.fmt.lower()}")
+            if args.num_partitions and args.num_partitions > 0:
+                logger.debug("Partitioning...")
+                logger.info(f"Number of Partitions: {args.num_partitions}")
+                partitioner = Partitioning(num_partitions=args.num_partitions, num_sequences=len(sequences), method='random')
+                partitions = partitioner.random_partitioning(cluster)
+                logger.debug("Writing partitions...")
+                write_partition(partitions, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
+            else:
+                logger.debug("Writing clusters...")
+                write_cluster(cluster, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
+
+            # evaluate silhouette score
+            logger.debug("Evaluating silhouette score...")
+            silhouette, _ = cluster.silhouette(measurement)
+            logger.info(f"Silhouette score: {silhouette:.3f}")
+
+            row = [t_c, num_seq, num_seq_nodup, len(sequences), len(cluster), silhouette.round(3), output_file]
+            clustering_results.append(row)
+
+            # draw figures
+            logger.debug("Drawing figures...")
+            hist_file, silhouette_file = draw_figures(cluster, measurement, output_dir, threshold=t_c)
+            file_results.append([t_c, hist_file, silhouette_file, output_file])
     
     # create a zip file
     logger.debug("Creating a zip output file...")

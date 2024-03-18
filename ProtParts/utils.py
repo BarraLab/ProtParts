@@ -428,3 +428,30 @@ def draw_figures(clusters, measurement, output_dir, threshold):
         fig.savefig(silhouettes_file, dpi=300, transparent=True, bbox_inches='tight')
     
     return hist_file, silhouettes_file
+
+
+def plot_sizebar(size_thres_dict, max_partition_size, output_dir):
+    """
+    Plot size bar
+
+    Parameters
+    ----------
+    size_thres_dict : dict
+        Dict of threshold and max cluster size
+    max_partition_size : int
+        Maximum partition size
+    output_dir : str
+        Path to output directory
+    """
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    print(size_thres_dict)
+    sns.barplot(x=list(size_thres_dict.keys()), y=list(size_thres_dict.values()), color='#aa688f')
+    ax.axhline(y=max_partition_size, color='r', linestyle='--')
+    ax.text(min(list(size_thres_dict.keys())), max_partition_size * 1.1, f"Max partition capacity: {max_partition_size}", color='r')
+    ax.set_xlabel('Threshold')
+    ax.set_ylabel('Max cluster size')
+    ax.set_title('Max cluster size at different threshold')
+    fig.savefig(os.path.join(output_dir, 'size_bar.png'), dpi=300, transparent=True, bbox_inches='tight')
+
+    return os.path.join(output_dir, 'size_bar.png')
