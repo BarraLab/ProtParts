@@ -99,7 +99,7 @@ def write_partition(partition, out_file, fmt='json', **kwargs):
         Keyword arguments for output format
     """
     
-    if fmt == 'txt':
+    if fmt.lower() == 'txt':
         with open(out_file, 'w') as f:
             f.write(f"# Clustering method: {kwargs['method']}\n")
             f.write(f"# Threshold: {kwargs['threshold']}\n")
@@ -108,18 +108,18 @@ def write_partition(partition, out_file, fmt='json', **kwargs):
                 for cidx, c in par.items():
                     for name in c:
                         f.write(f"ClustID {cidx} PartID {pidx} {name}\n")    
-    elif fmt == 'json':
+    elif fmt.lower() == 'json':
         with open(out_file, 'w') as f:
             partition_named = {f"Partition_{pidx}":{f"Cluster_{cidx}":c for cidx, c in par.items()} for pidx, par in partition.items()}
             json.dump(partition_named, f, indent=4)
-    elif fmt == 'csv':
+    elif fmt.lower() == 'csv':
         with open(out_file, 'w') as f:
             f.write('SequenceID,PartitionID,ClusterID\n')
             for pidx, par in partition.items():
                 for cidx, c in par.items():
                     for name in c:
                         f.write(f"{name},{pidx},{cidx}\n")
-    elif fmt in ('fasta', 'fa'):
+    elif fmt.lower() in ('fasta', 'fa'):
         with open(out_file, 'w') as f:
             for pidx, par in partition.items():
                 for cidx, c in par.items():
@@ -259,7 +259,7 @@ def init_logging(tmp_dir):
     return logger
 
 
-def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes):
+def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes, threshold):
     """
     Plot silhouettes
 
@@ -275,11 +275,14 @@ def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes):
     fig, ax = plt.subplots(figsize=(6, 6))
 
     y_lower = 10
+    
+    clusters_sorted = clusters.sort()
 
-    cluster_labels = [i for i in clusters.index().values()]
-    n_clusters = len(clusters)
-    cluster_colors = sns.cubehelix_palette(n_colors=n_clusters, as_cmap=False)[::-1]
-    for i in range(n_clusters):
+    cluster_labels = [i for i in clusters_sorted.index().values()]
+    n_clusters = len(clusters_sorted)
+    n_colors = 10
+    cluster_colors = sns.cubehelix_palette(n_colors=n_colors, as_cmap=False)[::-1]
+    for i in range(n_colors):
         # i_cluster = n_clusters[i]
         # Aggregate the silhouette scores for samples belonging to
         # cluster i, and sort them
@@ -290,18 +293,28 @@ def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes):
 
         size_cluster_i = ith_cluster_silhouette_values.shape[0]
         
-        if size_cluster_i > 10:
-            ax.text(-1.05, y_lower + 0.5 * size_cluster_i, str(i), fontsize=5)
-            y_upper = y_lower + size_cluster_i
+        # if size_cluster_i > 10:
+        #     ax.text(-1.05, y_lower + 0.5 * size_cluster_i, str(i), fontsize=5)
+        #     y_upper = y_lower + size_cluster_i
 
-            #color = cm.nipy_spectral(float(i) / n_clusters)
-            color = cluster_colors[i]
-            ax.fill_betweenx(list(range(y_lower, y_upper)), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
+        #     #color = cm.nipy_spectral(float(i) / n_clusters)
+        #     color = cluster_colors[i]
+        #     ax.fill_betweenx(list(range(y_lower, y_upper)), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
 
-            # Compute the new y_lower for next plot
-            y_lower = y_upper + 10  # 10 for the 0 samples
+        #     # Compute the new y_lower for next plot
+        #     y_lower = y_upper + 10  # 10 for the 0 samples
+        
+        ax.text(-1.05, y_lower + 0.5 * size_cluster_i, str(i), fontsize=5)
+        y_upper = y_lower + size_cluster_i
 
-    ax.set_title('Silhouette plot per sample')
+        #color = cm.nipy_spectral(float(i) / n_clusters)
+        color = cluster_colors[i]
+        ax.fill_betweenx(list(range(y_lower, y_upper)), 0, ith_cluster_silhouette_values, facecolor=color, edgecolor=color, alpha=0.7)
+
+        # Compute the new y_lower for next plot
+        y_lower = y_upper + 10  # 10 for the 0 samples
+
+    ax.set_title(f"Silhouette plot per sample at {threshold}")
     ax.set_xlabel("Silhouette coefficient")
     ax.set_ylabel("Cluster label")
 
@@ -370,3 +383,48 @@ def create_report(clusters, measurement, output_file, **kwargs):
     with open(os.path.join(output_dir, 'report.html'), 'w') as f:
         f.write(template)
 
+
+def draw_figures(clusters, measurement, output_dir, threshold):
+    """
+    Draw figures
+
+    Parameters
+    ----------
+    clusters : Cluster
+        Cluster object
+    measurement : tuple
+        List of measurement (seq1, seq2, measurement)
+    output_dir : str
+        Path to output directory
+    """
+
+    #output_dir = os.path.dirname(output_file)
+    hist_file = os.path.join(output_dir, f"cluster_size_{threshold}.png")
+    silhouettes_file = os.path.join(output_dir, f"silhouette_{threshold}.png")
+
+    # draw histogram of cluster size
+    cluster_size_list = list(map(len, clusters.clusters.values()))
+    fig, ax = plt.subplots()
+    sns.histplot(cluster_size_list, ax=ax, bins=30, color='#aa688f', edgecolor='k', linewidth=1, alpha=1, kde=False)
+    ax.set_xlabel('Cluster size')
+    ax.set_ylabel('Number of clusters')
+    ax.set_title(f"Distribution of cluster size at {threshold}")
+    fig.savefig(hist_file, dpi=300, transparent=True, bbox_inches='tight')
+
+    # draw silhouettes
+    if len(clusters) < 2 or len(clusters) == clusters.num_data(by='sum'):
+        mean_silhouettes = "NA"
+        # Create an empty plot
+        fig, ax= plt.subplots(figsize=(6, 6))
+        ax.text(0.5, 0.5, f"Silhouette coefficient requires\n at least 2 clusters\n and at most {clusters.num_data(by='sum')-1} clusters",
+                horizontalalignment='center', verticalalignment='center',
+                linespacing=2, transform=plt.gca().transAxes)
+        ax.set_yticks([])
+        fig.savefig(silhouettes_file, dpi=300)
+    else:
+        mean_silhouettes, sample_silhouette_values = clusters.silhouette(measurement)
+        mean_silhouettes = mean_silhouettes.round(3)
+        fig, ax = plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes, threshold)
+        fig.savefig(silhouettes_file, dpi=300, transparent=True, bbox_inches='tight')
+    
+    return hist_file, silhouettes_file
