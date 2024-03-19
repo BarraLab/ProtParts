@@ -445,7 +445,6 @@ def plot_sizebar(size_thres_dict, max_partition_size, output_dir):
     """
 
     fig, ax = plt.subplots(figsize=(6, 6))
-    print(size_thres_dict)
     sns.barplot(x=list(size_thres_dict.keys()), y=list(size_thres_dict.values()), color='#aa688f')
     ax.axhline(y=max_partition_size, color='r', linestyle='--')
     ax.text(min(list(size_thres_dict.keys())), max_partition_size * 1.1, f"Max partition capacity: {max_partition_size}", color='r')
