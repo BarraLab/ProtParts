@@ -146,7 +146,7 @@ def write_cluster(cluster, out_file, fmt='json', **kwargs):
         Keyword arguments for output format
     """
 
-    if fmt == 'txt':
+    if fmt.lower() == 'txt':
         with open(out_file, 'w') as f:
             f.write(f"# Clustering method: {kwargs['method']}\n")
             f.write(f"# Threshold: {kwargs['threshold']}\n")
@@ -154,17 +154,17 @@ def write_cluster(cluster, out_file, fmt='json', **kwargs):
             for cidx, c in cluster.items():
                 for name in c:
                     f.write(f"ClustID {cidx} {name}\n")
-    elif fmt == 'json':
+    elif fmt.lower() == 'json':
         with open(out_file, 'w') as f:
             cluster_named = {f"Cluster_{cidx}":c for cidx, c in cluster.items()}
             json.dump(cluster_named, f, indent=4)
-    elif fmt == 'csv':
+    elif fmt.lower() == 'csv':
         with open(out_file, 'w') as f:
             f.write('SequenceID,ClusterID\n')
             for cidx, c in cluster.items():
                 for name in c:
                     f.write(f"{name},{cidx}\n")
-    elif fmt in ('fasta', 'fa'):
+    elif fmt.lower() in ('fasta', 'fa'):
         with open(out_file, 'w') as f:
             for cidx, c in cluster.items():
                 for name in c:
@@ -424,7 +424,7 @@ def draw_figures(clusters, measurement, output_dir, threshold):
     else:
         mean_silhouettes, sample_silhouette_values = clusters.silhouette(measurement)
         mean_silhouettes = mean_silhouettes.round(3)
-        fig, ax = plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes, threshold)
+        fig, ax = plot_silhouette(clusters, sample_silhouette_values[2], mean_silhouettes, threshold)
         fig.savefig(silhouettes_file, dpi=300, transparent=True, bbox_inches='tight')
     
     return hist_file, silhouettes_file
