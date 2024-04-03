@@ -34,7 +34,7 @@ class Report():
                                             threshold_r=params.threshold_r,
                                             num_partitions=params.num_partitions,
                                             redundancy_reduction=bool(params.threshold_r),
-                                            cluster_separation=params.separation)
+                                            cluster_pruning=params.prune)
         
         self.report += params_report
 
@@ -74,16 +74,21 @@ class Report():
         """
 
         html_table = '<table>\n'
-
+        have_na = False
         
         # Add a row to the HTML table for each row in the CSV file
         for i, row in enumerate(results):
             if i == 0:  # Assuming the first row is the header
                 html_table += '  <thead>\n    <tr>' + ''.join([f'<th>{cell}</th>' for cell in row]) + '</tr>\n  </thead>\n  <tbody>\n'
+            elif row[-1] == 'NA':
+                html_table += '    <tr>' + ''.join([f'<td>{cell}</td>' for cell in row]) + f'</tr>\n'
+                have_na = True
             else:
                 html_table += '    <tr>' + ''.join([f'<td>{cell}</td>' for cell in row[:-1]]) + f'<td><a href="{row[-1]}" download>Link</a></td></tr>\n'
         html_table += '  </tbody>\n</table>\n'
 
+        if have_na:
+            html_table += "<br>\n* NA indicates the size of maximum cluster exceeds the maximum partition capacity.\n<br>\n"
 
         with open('template/results.html', 'r') as f:
             template = Template(f.read())
