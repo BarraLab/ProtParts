@@ -82,7 +82,7 @@ def clust_partition(args):
     clustering_results = [['Threshold', '# sequences', '# unique sequences', '# remaining sequences', '# clusters', 'Silhouette score', 'Download']]
 
     # clustering based on the number of partitions
-    if args.threshold_c is None:
+    if (args.threshold_c is None) and (args.exp_s is None) and (args.exp_e is None):
         logger.debug("Clustering based on the number of partitions...")
 
         if args.num_partitions is None:
@@ -132,10 +132,16 @@ def clust_partition(args):
         file_results.append([t_c, hist_file, silhouette_file, output_file, sizebar_file])
         
     else:
-
+        
+        if args.threshold_c is None:
+            exp_min = min(abs(int(args.exp_s)), abs(int(args.exp_e)))
+            exp_max = max(abs(int(args.exp_s)), abs(int(args.exp_e)))
+            threshold_c = [10 ** -(exp) for exp in range(exp_min, exp_max+1)]
         # clustering based on thresholds
-
-        for t_c in args.threshold_c:
+        else:
+            threshold_c = [float(i) for i in args.threshold_c.split(',')]
+        
+        for t_c in threshold_c:
 
             logger.info(f"Threshold for clustering: {t_c}")
             clust = Clustering(threshold=t_c, method='graph', measurement_type='distance')
@@ -145,13 +151,25 @@ def clust_partition(args):
             # partitioning
             #output_name = os.path.basename(input_file).split('.')[0] + f"_{t_c}." + args.fmt.lower()
             output_file = os.path.join(output_dir, input_name + f"_{t_c}.{args.fmt.lower()}")
+            
             if args.num_partitions and args.num_partitions > 0:
                 logger.debug("Partitioning...")
                 logger.info(f"Number of Partitions: {args.num_partitions}")
+                
                 partitioner = Partitioning(num_partitions=args.num_partitions, num_sequences=len(sequences), method='random')
-                partitions = partitioner.random_partitioning(cluster)
-                logger.debug("Writing partitions...")
-                write_partition(partitions, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
+                partition_size = partitioner.partition_size()
+                logger.debug(f"Partition size: {partition_size}")
+                max_partition_size = partition_size[max(partition_size, key=partition_size.get)]
+
+                max_cluster_size = cluster.num_data(by='max')
+                logger.debug(f"Max size of clusters: {max_cluster_size}")
+
+                if max_cluster_size > max_partition_size:
+                    output_file = "NA"
+                else:
+                    partitions = partitioner.random_partitioning(cluster)
+                    logger.debug("Writing partitions...")
+                    write_partition(partitions, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
             else:
                 logger.debug("Writing clusters...")
                 write_cluster(cluster, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
@@ -175,7 +193,8 @@ def clust_partition(args):
     out_zip_file = os.path.join(output_dir, input_name + '_protparts.zip')
     with zipfile.ZipFile(out_zip_file, 'w') as zipout:        
         for files in file_results:
-            zipout.write(files[3], arcname=os.path.basename(files[3]), compress_type=zipfile.ZIP_DEFLATED)
+            if files[3] != "NA":
+                zipout.write(files[3], arcname=os.path.basename(files[3]), compress_type=zipfile.ZIP_DEFLATED)
 
     
     # write clustering report
