@@ -114,12 +114,12 @@ class Report():
         with open('template/analysis.html', 'r') as f:
             template = Template(f.read())
 
-        if len(figures[0]) == 5:
+        if len(figures[-1]) == 5:
             html_figure = f"""
             <div class="grid">
             <figure>
             <h3>Maximum cluster size at different thresholds</h3>
-            <img src="{figures[0][4]}" alt="Barplot of max cluster size">
+            <img src="{figures[-1][4]}" alt="Barplot of max cluster size">
             </figure>
             </div>\n
             """

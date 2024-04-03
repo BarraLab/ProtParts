@@ -80,7 +80,101 @@ def clust_partition(args):
     logger.debug("Clustering with graph...")
     file_results = []
     clustering_results = [['Threshold', '# sequences', '# unique sequences', '# remaining sequences', '# clusters', 'Silhouette score', 'Download']]
+    only_partition = False
+    size_thres_dict = {}
 
+    if args.threshold_c:
+        threshold_c = [float(i) for i in args.threshold_c.split(',')]
+    elif args.exp_s and args.exp_e:
+        exp_min = min(abs(int(args.exp_s)), abs(int(args.exp_e)))
+        exp_max = max(abs(int(args.exp_s)), abs(int(args.exp_e)))
+        threshold_c = [10 ** -(exp) for exp in range(exp_min, exp_max+1)]
+    elif (args.threshold_c is None) and (args.exp_s is None) and (args.exp_e is None) and args.num_partitions:
+        threshold_c = [10 ** (-exp) for exp in range(1, 21)]
+        only_partition = True
+    else:
+        raise ValueError("Threshold for clustering is not specified. At least one of the E-value threshold, range of threshold, or number of partitions should be specified.")
+    
+    for t_c in threshold_c:
+        have_partition = False
+
+        logger.info(f"Threshold for clustering: {t_c}")
+        clust = Clustering(threshold=t_c, method='graph', measurement_type='distance')
+        cluster = clust.clustering(sequences, measurement)
+        logger.info(f"Number of clusters: {len(cluster)}")
+        
+        output_file = os.path.join(output_dir, input_name + f"_{t_c}.{args.fmt.lower()}")
+
+        if args.num_partitions is None:
+            logger.debug("Writing clusters...")
+            write_cluster(cluster, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
+        else:
+            logger.debug("Partitioning...")
+            logger.info(f"Number of Partitions: {args.num_partitions}")
+            
+            partitioner = Partitioning(num_partitions=args.num_partitions, num_sequences=len(sequences), method='random')
+            partition_size = partitioner.partition_size()
+            #logger.debug(f"Partition size: {partition_size}")
+            max_partition_size = partition_size[max(partition_size, key=partition_size.get)]
+
+            max_cluster_size = cluster.num_data(by='max')
+            #logger.debug(f"Max size of clusters: {max_cluster_size}")
+            
+            size_thres_dict[t_c] = max_cluster_size
+
+            if max_cluster_size > max_partition_size:
+                output_file = "NA"
+            else:
+                partitions = partitioner.random_partitioning(cluster)
+                logger.debug("Writing partitions...")
+                write_partition(partitions, output_file, args.fmt, sequences=sequences, method='graph', threshold=t_c)
+                have_partition = True
+    
+        # evaluate silhouette score
+        logger.debug("Evaluating silhouette score...")
+        silhouette, _ = cluster.silhouette(measurement)
+        logger.info(f"Silhouette score: {silhouette:.3f}")
+
+        row = [t_c, num_seq, num_seq_nodup, len(sequences), len(cluster), silhouette.round(3), output_file]
+        clustering_results.append(row)
+
+        # draw figures
+        logger.debug("Drawing figures...")
+        hist_file, silhouette_file = draw_figures(cluster, measurement, output_dir, threshold=t_c)
+        file_results.append([t_c, hist_file, silhouette_file, output_file])
+
+        if only_partition and have_partition:
+            logger.debug("Drawing size bar...")
+            sizebar_file = plot_sizebar(size_thres_dict, max_partition_size, output_dir)
+            file_results[-1].append(sizebar_file)
+            break
+
+    # create a zip file
+    logger.debug("Creating a zip output file...")
+    out_zip_file = os.path.join(output_dir, input_name + '_protparts.zip')
+    with zipfile.ZipFile(out_zip_file, 'w') as zipout:        
+        for files in file_results:
+            if files[3] != "NA":
+                zipout.write(files[3], arcname=os.path.basename(files[3]), compress_type=zipfile.ZIP_DEFLATED)
+
+    
+    # write clustering report
+    logger.debug("Creating clustering report...")
+    report = Report()
+    report.write_params(args)
+    report.write_results(clustering_results, out_zip_file)
+    report.write_figures(file_results)
+    report.save_html(os.path.join(output_dir, input_name + '_protparts_report.html'))
+
+
+    # create report
+    # logger.debug("Creating report...")
+    # create_report(cluster, measurement, output_file, threshold_c=threshold_c, threshold_r=threshold_r, num_partitions=num_partitions, num_seq=num_seq, num_seq_nodup=num_seq_nodup)
+    
+    logger.debug("Done.")
+
+    
+"""
     # clustering based on the number of partitions
     if (args.threshold_c is None) and (args.exp_s is None) and (args.exp_e is None):
         logger.debug("Clustering based on the number of partitions...")
@@ -186,29 +280,6 @@ def clust_partition(args):
             logger.debug("Drawing figures...")
             hist_file, silhouette_file = draw_figures(cluster, measurement, output_dir, threshold=t_c)
             file_results.append([t_c, hist_file, silhouette_file, output_file])
-    
-    # create a zip file
-    logger.debug("Creating a zip output file...")
-    #out_zip_name = os.path.basename(input_file).split('.')[0] + '_protparts.zip'
-    out_zip_file = os.path.join(output_dir, input_name + '_protparts.zip')
-    with zipfile.ZipFile(out_zip_file, 'w') as zipout:        
-        for files in file_results:
-            if files[3] != "NA":
-                zipout.write(files[3], arcname=os.path.basename(files[3]), compress_type=zipfile.ZIP_DEFLATED)
+    """
 
-    
-    # write clustering report
-    logger.debug("Creating clustering report...")
-    report = Report()
-    report.write_params(args)
-    report.write_results(clustering_results, out_zip_file)
-    report.write_figures(file_results)
-    report.save_html(os.path.join(output_dir, input_name + '_protparts_report.html'))
-
-
-    # create report
-    # logger.debug("Creating report...")
-    # create_report(cluster, measurement, output_file, threshold_c=threshold_c, threshold_r=threshold_r, num_partitions=num_partitions, num_seq=num_seq, num_seq_nodup=num_seq_nodup)
-    
-    logger.debug("Done.")
 
