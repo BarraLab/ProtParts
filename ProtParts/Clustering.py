@@ -207,7 +207,7 @@ class Cluster:
         sample_silhouette_values = silhouette_samples(pivot, data_label, metric='precomputed')
         metric = np.mean(sample_silhouette_values)
 
-        return metric, sample_silhouette_values
+        return metric, (data_list, data_label, sample_silhouette_values)
 
 
 class Clustering:
@@ -270,7 +270,9 @@ class Clustering:
             op = operator.ge
 
         if self.method == 'graph':
-            clusters = self._graph(sequences, measurement, op)
+            G = self._graph(sequences, measurement, op)
+            result = {idx:sorted(list(component)) for idx, component in enumerate(nx.connected_components(G))}
+            clusters = Cluster(result)
         elif self.method == 'hobohm1':
             clusters = self._hobohm1(sequences, measurement, op)
         
@@ -303,10 +305,8 @@ class Clustering:
         
         # add edges
         G.add_weighted_edges_from(measurement)
-        
-        result = {idx:sorted(list(component)) for idx, component in enumerate(nx.connected_components(G))}
 
-        return Cluster(result)
+        return G
     
 
     def _hobohm1(self, sequences, measurement, op):
@@ -330,5 +330,170 @@ class Clustering:
 
         return Cluster(result)
 
+
+    def _avg_distance_to_neighbors(self, G, node):
+        """
+        Calculate the average distance of a node to its neighbors
+
+        Parameters
+        ----------
+        node : str
+            Node id
+
+        Returns
+        -------
+        avg_dist : float
+            Average distance to neighbors
+        """
+
+        neighbors = list(G.neighbors(node))
+        if len(neighbors) == 0:
+            return float('inf')  # Return infinity if a node has no neighbors
+        distances = [G[node][nbr].get('weight', 1) for nbr in neighbors]  # Default to 1 if unweighted
+        return sum(distances) / len(distances)
+
+
+    def _ratio_centrality(self, G):
+        """
+        Calculate the ratio centrality of each node
+
+        Returns
+        -------
+        ratios : dict
+            Dict of ratio centrality of each node
+        """
+
+        ratios = {}
+        for node in G.nodes():
+            avg_dist = self._avg_distance_to_neighbors(G, node)
+            # Calculate the average distance of each neighbor to their neighbors
+            neighbor_dists = [self._avg_distance_to_neighbors(G, nbr) for nbr in G.neighbors(node)]
+            # Avoid division by zero
+            if neighbor_dists:
+                avg_neighbor_dist = sum(neighbor_dists) / len(neighbor_dists)
+                ratios[node] = avg_dist / avg_neighbor_dist if avg_neighbor_dist else float('inf')
+            else:
+                ratios[node] = float('inf')  # No neighbors case
+        return ratios
+
+
+    def _optimize_ratio(self, sequences, measurement):
+        """
+        Optimize the cluster based on ratio centrality
+
+        Parameters
+        ----------
+        sequences : dict
+            Dict of sequences
+        measurement : tuple
+            List of measurement (seq1, seq2, measurement)
+        
+        Returns
+        -------
+        result : Cluster
+            Optimized cluster
+        """
+        
+        #clust = Clustering(threshold=threshold, method='graph', measurement_type='distance')
+        G = self._graph(sequences, measurement, operator.le)
+        cluster = Cluster({idx:sorted(list(component)) for idx, component in enumerate(nx.connected_components(G))})
+        silhouette_score, silhouette_score_samples = cluster.silhouette(measurement)
+
+        silhouette_score_tmp = 99
+        silhouette_score_current = silhouette_score
+        best_step = {'graph':G, 'cluster':cluster, 'silhouette_score':silhouette_score, 'silhouette_score_samples':silhouette_score_samples}
+        
+        iter = 0
+        print(f"Iter\tCluster\tNode\tSilhouette_iter\tSilhouette_highest\tSilhouette_current")
+        while silhouette_score_tmp > silhouette_score_current:
+            iter += 1
+            #print(f"Iter {iter}")
+            print([len(c) for c in best_step['silhouette_score_samples']])
+            negative_clusters = {c for (i, c, v) in zip(*best_step['silhouette_score_samples']) if v < 0}
+            print(negative_clusters)
+            
+            best_step_tmp = {'silhouette_score':-1}
+            silhouette_score_tmp = best_step['silhouette_score']
+            silhouette_score_current = best_step['silhouette_score']
+
+            for c in negative_clusters:
+                elements = best_step['cluster'].clusters[c]
+                G_tmp = best_step['graph'].subgraph(elements)
+
+                ratios = self._ratio_centrality(G_tmp)
+                nodes_tmp = sorted(ratios, key=ratios.get, reverse=True)
                 
+                """
+                # remove the node with the highest ratio centrality
+                for node in nodes_tmp:
+                    sequence_new = {k:v for k, v in sequences.items() if (k != node) and (k in best_step['cluster'].index())}
+                    measurement_new = list(filter(lambda x:(x[0] != node) and (x[1] != node), measurement))
+                    G_new = self._graph(sequence_new, measurement_new, operator.le)
+                    cluster_new = Cluster({idx:sorted(list(component)) for idx, component in enumerate(nx.connected_components(G_new))})
+                    silhouette_score_new, silhouette_score_samples_new = cluster_new.silhouette(measurement_new)
+                    
+                    print(f"{iter}\t{c}\t{node}\t{silhouette_score_new:.5f}\t{silhouette_score_tmp:.5f}\t{best_step['silhouette_score']:.5f}\t{silhouette_score_new > silhouette_score_tmp}\t{best_step_tmp['silhouette_score'] > best_step['silhouette_score']}")
+                    
+                    # best_step_tmp record the best step for each negative cluster
+                    if silhouette_score_new > silhouette_score_tmp:
+                        best_step_tmp['graph'] = G_new
+                        best_step_tmp['cluster'] = cluster_new
+                        best_step_tmp['silhouette_score'] = silhouette_score_new
+                        best_step_tmp['silhouette_score_samples'] = silhouette_score_samples_new
+                        silhouette_score_tmp = silhouette_score_new
+                    else:
+                        break
+                """
+                node = nodes_tmp[0]
+                sequence_new = {k:v for k, v in sequences.items() if (k != node) and (k in best_step['cluster'].index())}
+                measurement_new = list(filter(lambda x:(x[0] != node) and (x[1] != node), measurement))
+                G_new = self._graph(sequence_new, measurement_new, operator.le)
+                cluster_new = Cluster({idx:sorted(list(component)) for idx, component in enumerate(nx.connected_components(G_new))})
+                silhouette_score_new, silhouette_score_samples_new = cluster_new.silhouette(measurement_new)
+                
+                print(f"{iter}\t{c}\t{node}\t{silhouette_score_new:.5f}\t{silhouette_score_tmp:.5f}\t{best_step['silhouette_score']:.5f}\t{silhouette_score_new > silhouette_score_tmp}\t{best_step_tmp['silhouette_score'] > best_step['silhouette_score']}")
+                
+                # best_step_tmp record the best step for each negative cluster
+                if silhouette_score_new > silhouette_score_tmp:
+                    best_step_tmp['graph'] = G_new
+                    best_step_tmp['cluster'] = cluster_new
+                    best_step_tmp['silhouette_score'] = silhouette_score_new
+                    best_step_tmp['silhouette_score_samples'] = silhouette_score_samples_new
+                    silhouette_score_tmp = silhouette_score_new
+                
+                
+
+            # best_step choose the one to remove and update the graph
+            if best_step_tmp['silhouette_score'] > best_step['silhouette_score']:
+                best_step['graph'] = best_step_tmp['graph']
+                best_step['cluster'] = best_step_tmp['cluster']
+                best_step['silhouette_score'] = best_step_tmp['silhouette_score']
+                best_step['silhouette_score_samples'] = best_step_tmp['silhouette_score_samples']
+
+        result = Cluster({idx:sorted(list(component)) for idx, component in enumerate(nx.connected_components(best_step['graph']))})
+        return result
+
+
+    def optimize(self, sequences, measurement, method='ratio'):
+        """
+        Optimize the cluster
+
+        Parameters
+        ----------
+        measurement : tuple
+            List of measurement (seq1, seq2, measurement)
+        method : str
+            Optimization method
+        
+        Returns
+        -------
+        result : Cluster
+            Optimized cluster
+        """
+        if method == 'ratio':
+            return self._optimize_ratio(sequences, measurement)
+        else:
+            raise ValueError(f"Invalid optimization method: {method}")
+
+           
 

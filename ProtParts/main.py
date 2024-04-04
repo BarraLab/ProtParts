@@ -95,13 +95,25 @@ def clust_partition(args):
     else:
         raise ValueError("Threshold for clustering is not specified. At least one of the E-value threshold, range of threshold, or number of partitions should be specified.")
     
+    if args.prune:
+        threshold_c.append("prune")
+    
     for t_c in threshold_c:
         have_partition = False
-
-        logger.info(f"Threshold for clustering: {t_c}")
-        clust = Clustering(threshold=t_c, method='graph', measurement_type='distance')
-        cluster = clust.clustering(sequences, measurement)
-        logger.info(f"Number of clusters: {len(cluster)}")
+        
+        if t_c == "prune":
+            logger.debug("Pruning clusters...")
+            t_best = float(max(clustering_results[1:], key=lambda x: x[5])[0])
+            t_c = f'{t_best}_prune' 
+            clust = Clustering(threshold=t_best, method='graph', measurement_type='distance')
+            cluster = clust.optimize(sequences, measurement, method='ratio')
+            logger.info(f"Number of clusters: {len(cluster)}")
+            sequences = {k:v for k, v in sequences.items() if k in cluster.index()}
+        else:
+            logger.info(f"Threshold for clustering: {t_c}")
+            clust = Clustering(threshold=t_c, method='graph', measurement_type='distance')
+            cluster = clust.clustering(sequences, measurement)
+            logger.info(f"Number of clusters: {len(cluster)}")
         
         output_file = os.path.join(output_dir, input_name + f"_{t_c}.{args.fmt.lower()}")
 
