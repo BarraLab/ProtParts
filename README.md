@@ -12,7 +12,10 @@ pip install -r requirments.txt
 
 ```txt
 $ python protparts.py -h
-usage: protparts.py [-h] -i INPUT_FILE [-c THRESHOLD_C [THRESHOLD_C ...]] [-r THRESHOLD_R] [-p NUM_PARTITIONS] [-f {JSON,TXT,CSV,FASTA}] -o OUTPUT_DIR [-s] [--makeblastdb MAKEBLASTDB_EXEC] [--blastp BLASTP_EXEC]
+usage: protparts.py [-h] -i INPUT_FILE [-c THRESHOLD_C] [--exps EXP_S]
+                    [--expe EXP_E] [-r THRESHOLD_R] [-p NUM_PARTITIONS]
+                    [-f {JSON,TXT,CSV,FASTA}] -o OUTPUT_DIR [--prune]
+                    [--makeblastdb MAKEBLASTDB_EXEC] [--blastp BLASTP_EXEC]
                     [--tmpdir TMP_DIR]
 
 Protein clustering and partitioning
@@ -20,8 +23,9 @@ Protein clustering and partitioning
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE         Input fasta file
-  -c THRESHOLD_C [THRESHOLD_C ...]
-                        Threshold for clustering
+  -c THRESHOLD_C        Threshold for clustering (use comma , to separate multiple thresholds)
+  --exps EXP_S          Starting exponent for threshold
+  --expe EXP_E          Ending exponent for threshold
   -r THRESHOLD_R        Threshold for sequence redundancy reduction.
                         None: skip redundancy reduction
                         (Default: None)
@@ -30,14 +34,12 @@ optional arguments:
                         Output format
                         (Default: JSON)
   -o OUTPUT_DIR         Output directory
-  -s                    Separate clusters for improvement
+  --prune               Pruning clusters to improve clustering performance
   --makeblastdb MAKEBLASTDB_EXEC
                         Path to makeblastdb executable
                         (Default: config.MAKEBLASTDB_EXEC)
   --blastp BLASTP_EXEC  Path to blastp executable
                         (Default: config.BLASTP_EXEC)
-  --tmpdir TMP_DIR      Path to temporary directory
-                        (Default: config.TMP_DIR)
 ```
 
 Clustering with a threshold
@@ -49,7 +51,13 @@ python protparts.py -i example.fa -c 1e-9 -o results/
 Clustering with multiple thresholds
 
 ```bash
-python protparts.py -i example.fa -c 1e-8 1e-9 1e-10 -o results/
+python protparts.py -i example.fa -c 1e-8,1e-9,1e-10 -o results/
+```
+
+Clustering with a range of thresholds in exponent, for exmaple, using threshold between 1e-5 and 1e-10.
+
+```bash
+python protparts.py -i example.fa --exps 5 --expe 10 -o results/
 ```
 
 Performance sequence redundancy reduction with a threshold before clustering
@@ -69,6 +77,12 @@ This option will use the highest E-value threshold (lowest sequence homology) wh
 
 ```bash
 python protparts.py -i example.fa -p 5 -o results/
+```
+
+Clustering with a threshold and prune the result clusters to improve clustering performance
+
+```bash
+python protparts.py -i example.fa -c 1e-9 --prune -o results/
 ```
 
 Output with specific output format
