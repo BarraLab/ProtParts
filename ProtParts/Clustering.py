@@ -404,13 +404,13 @@ class Clustering:
         best_step = {'graph':G, 'cluster':cluster, 'silhouette_score':silhouette_score, 'silhouette_score_samples':silhouette_score_samples}
         
         iter = 0
-        print(f"Iter\tCluster\tNode\tSilhouette_iter\tSilhouette_highest\tSilhouette_current")
+        #print(f"Iter\tCluster\tNode\tSilhouette_iter\tSilhouette_highest\tSilhouette_current")
         while silhouette_score_tmp > silhouette_score_current:
             iter += 1
             #print(f"Iter {iter}")
-            print([len(c) for c in best_step['silhouette_score_samples']])
+            #print([len(c) for c in best_step['silhouette_score_samples']])
             negative_clusters = {c for (i, c, v) in zip(*best_step['silhouette_score_samples']) if v < 0}
-            print(negative_clusters)
+            #print(negative_clusters)
             
             best_step_tmp = {'silhouette_score':-1}
             silhouette_score_tmp = best_step['silhouette_score']
@@ -451,7 +451,7 @@ class Clustering:
                 cluster_new = Cluster({idx:sorted(list(component)) for idx, component in enumerate(nx.connected_components(G_new))})
                 silhouette_score_new, silhouette_score_samples_new = cluster_new.silhouette(measurement_new)
                 
-                print(f"{iter}\t{c}\t{node}\t{silhouette_score_new:.5f}\t{silhouette_score_tmp:.5f}\t{best_step['silhouette_score']:.5f}\t{silhouette_score_new > silhouette_score_tmp}\t{best_step_tmp['silhouette_score'] > best_step['silhouette_score']}")
+                #print(f"{iter}\t{c}\t{node}\t{silhouette_score_new:.5f}\t{silhouette_score_tmp:.5f}\t{best_step['silhouette_score']:.5f}\t{silhouette_score_new > silhouette_score_tmp}\t{best_step_tmp['silhouette_score'] > best_step['silhouette_score']}")
                 
                 # best_step_tmp record the best step for each negative cluster
                 if silhouette_score_new > silhouette_score_tmp:
@@ -461,8 +461,6 @@ class Clustering:
                     best_step_tmp['silhouette_score_samples'] = silhouette_score_samples_new
                     silhouette_score_tmp = silhouette_score_new
                 
-                
-
             # best_step choose the one to remove and update the graph
             if best_step_tmp['silhouette_score'] > best_step['silhouette_score']:
                 best_step['graph'] = best_step_tmp['graph']
