@@ -81,6 +81,7 @@ def clust_partition(args):
     file_results = []
     clustering_results = [['Threshold', '# sequences', '# unique sequences', '# remaining sequences', '# clusters', 'Silhouette score', 'Download']]
     only_partition = False
+    have_partition = False
     size_thres_dict = {}
 
     if args.threshold_c:
@@ -99,9 +100,10 @@ def clust_partition(args):
         threshold_c.append("prune")
     
     for t_c in threshold_c:
-        have_partition = False
         
-        if t_c == "prune":
+        if t_c != "prune" and only_partition and have_partition:
+            continue
+        elif t_c == "prune":
             logger.debug("Pruning clusters...")
             t_best = float(max(clustering_results[1:], key=lambda x: x[5])[0])
             t_c = f'{t_best}_prune' 
@@ -145,9 +147,13 @@ def clust_partition(args):
         # evaluate silhouette score
         logger.debug("Evaluating silhouette score...")
         silhouette, _ = cluster.silhouette(measurement)
-        logger.info(f"Silhouette score: {silhouette:.3f}")
+        if silhouette is None:
+            silhouette = "NA"
+        else:
+            silhouette = silhouette.round(3)
+        logger.info(f"Silhouette score: {silhouette}")
 
-        row = [t_c, num_seq, num_seq_nodup, len(sequences), len(cluster), silhouette.round(3), output_file]
+        row = [t_c, num_seq, num_seq_nodup, len(sequences), len(cluster), silhouette, output_file]
         clustering_results.append(row)
 
         # draw figures
@@ -155,11 +161,11 @@ def clust_partition(args):
         hist_file, silhouette_file = draw_figures(cluster, measurement, output_dir, threshold=t_c)
         file_results.append([t_c, hist_file, silhouette_file, output_file])
 
-        if only_partition and have_partition:
-            logger.debug("Drawing size bar...")
-            sizebar_file = plot_sizebar(size_thres_dict, max_partition_size, output_dir)
-            file_results[-1].append(sizebar_file)
-            break
+    if only_partition and have_partition:
+        logger.debug("Drawing size bar...")
+        sizebar_file = plot_sizebar(size_thres_dict, max_partition_size, output_dir)
+        file_results[-1].append(sizebar_file)
+        #break
 
     # create a zip file
     logger.debug("Creating a zip output file...")
