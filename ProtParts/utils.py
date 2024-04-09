@@ -303,8 +303,7 @@ def plot_silhouette(clusters, sample_silhouette_values, mean_silhouettes, thresh
 
         #     # Compute the new y_lower for next plot
         #     y_lower = y_upper + 10  # 10 for the 0 samples
-        
-        ax.text(-1.05, y_lower + 0.5 * size_cluster_i, str(i), fontsize=5)
+        ax.text(sample_silhouette_values.min() - (sample_silhouette_values.max() - sample_silhouette_values.min()) * 0.03, y_lower + 0.5 * size_cluster_i, str(i), fontsize=5)
         y_upper = y_lower + size_cluster_i
 
         #color = cm.nipy_spectral(float(i) / n_clusters)
@@ -445,9 +444,10 @@ def plot_sizebar(size_thres_dict, max_partition_size, output_dir):
     """
 
     fig, ax = plt.subplots(figsize=(6, 6))
-    sns.barplot(x=list(size_thres_dict.keys()), y=list(size_thres_dict.values()), color='#aa688f')
+    sns.barplot(x=list(size_thres_dict.keys())[::-1], y=list(size_thres_dict.values())[::-1], color='#aa688f')
     ax.axhline(y=max_partition_size, color='r', linestyle='--')
-    ax.text(min(list(size_thres_dict.keys())), max_partition_size * 1.1, f"Max partition capacity: {max_partition_size}", color='r')
+    x_min = min([i for i in size_thres_dict.keys() if isinstance(i, float)])
+    ax.text(x_min, max_partition_size * 1.1, f"Max partition capacity: {max_partition_size}", color='r')
     ax.set_xlabel('Threshold')
     ax.set_ylabel('Max cluster size')
     ax.set_title('Max cluster size at different threshold')
