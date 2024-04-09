@@ -196,18 +196,22 @@ class Cluster:
         """
         data_list = list(self.index().keys())
         data_label = list(self.index().values())
-        pivot = np.ones((len(data_list), len(data_list))) * 11
-        data_dict = dict(zip(data_list, range(len(data_list))))
-        for seq1, seq2, measure in measurement:
-            if (seq1 in data_dict) and (seq2 in data_dict):
-                i = data_dict[seq1]
-                j = data_dict[seq2]
-                pivot[i, j] = measure
-        
-        sample_silhouette_values = silhouette_samples(pivot, data_label, metric='precomputed')
-        metric = np.mean(sample_silhouette_values)
 
-        return metric, (data_list, data_label, sample_silhouette_values)
+        if len(self.clusters) == 1:
+            return None, (data_list, data_label, None)
+        else:
+            pivot = np.ones((len(data_list), len(data_list))) * 11
+            data_dict = dict(zip(data_list, range(len(data_list))))
+            for seq1, seq2, measure in measurement:
+                if (seq1 in data_dict) and (seq2 in data_dict):
+                    i = data_dict[seq1]
+                    j = data_dict[seq2]
+                    pivot[i, j] = measure
+            
+            sample_silhouette_values = silhouette_samples(pivot, data_label, metric='precomputed')
+            metric = np.mean(sample_silhouette_values)
+
+            return metric, (data_list, data_label, sample_silhouette_values)
 
 
 class Clustering:
