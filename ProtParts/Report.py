@@ -2,6 +2,8 @@
 from string import Template
 import os
 
+HTML_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'template')
+
 class Report():
 
 
@@ -27,7 +29,7 @@ class Report():
             Parameters
         """
 
-        with open('template/params.html', 'r') as f:
+        with open(os.path.join(HTML_DIR, 'params.html'), 'r') as f:
             template = Template(f.read())
         
         params_report = template.substitute(threshold_c=params.threshold_c,
@@ -90,7 +92,7 @@ class Report():
         if have_na:
             html_table += "<br>\n* NA indicates the size of maximum cluster exceeds the maximum partition capacity.\n<br>\n"
 
-        with open('template/results.html', 'r') as f:
+        with open(os.path.join(HTML_DIR, 'results.html'), 'r') as f:
             template = Template(f.read())
         
         params_report = template.substitute(results_table=html_table,
@@ -111,7 +113,7 @@ class Report():
         self.report += "<h2>Analysis</h2>\n<hr>\n"
 
         # load the template
-        with open('template/analysis.html', 'r') as f:
+        with open(os.path.join(HTML_DIR, 'analysis.html'), 'r') as f:
             template = Template(f.read())
 
         html_figure = f"""
@@ -144,7 +146,7 @@ class Report():
             Output file
         """
 
-        with open('template/page.html', 'r') as f:
+        with open(os.path.join(HTML_DIR, 'page.html'), 'r') as f:
             template = Template(f.read())
 
         final_report = template.substitute(content=self.report)
