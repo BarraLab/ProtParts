@@ -146,7 +146,7 @@ def clust_partition(args):
     
         # evaluate silhouette score
         logger.debug("Evaluating silhouette score...")
-        silhouette, _ = cluster.silhouette(measurement)
+        silhouette, silhouette_per_sample = cluster.silhouette(measurement)
         if silhouette is None:
             silhouette = "NA"
         else:
@@ -158,7 +158,7 @@ def clust_partition(args):
 
         # draw figures
         logger.debug("Drawing figures...")
-        hist_file, silhouette_file = draw_figures(cluster, measurement, output_dir, threshold=t_c)
+        hist_file, silhouette_file = draw_figures(cluster, silhouette_per_sample, output_dir, threshold=t_c)
         file_results.append([t_c, hist_file, silhouette_file, output_file])
     
     # draw the scatter plot and histogram

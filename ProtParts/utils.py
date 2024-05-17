@@ -385,7 +385,7 @@ def create_report(clusters, measurement, output_file, **kwargs):
         f.write(template)
 
 
-def draw_figures(clusters, measurement, output_dir, threshold):
+def draw_figures(clusters, silhouette_per_sample, output_dir, threshold):
     """
     Draw figures
 
@@ -413,7 +413,7 @@ def draw_figures(clusters, measurement, output_dir, threshold):
     fig.savefig(hist_file, dpi=300, transparent=True, bbox_inches='tight')
 
     # draw silhouettes
-    if len(clusters) < 2 or len(clusters) == clusters.num_data(by='sum'):
+    if silhouette_per_sample[-1] is None:
         mean_silhouettes = "NA"
         # Create an empty plot
         fig, ax= plt.subplots(figsize=(6, 6))
@@ -423,9 +423,8 @@ def draw_figures(clusters, measurement, output_dir, threshold):
         ax.set_yticks([])
         fig.savefig(silhouettes_file, dpi=300)
     else:
-        mean_silhouettes, sample_silhouette_values = clusters.silhouette(measurement)
-        mean_silhouettes = mean_silhouettes.round(3)
-        fig, ax = plot_silhouette(clusters, sample_silhouette_values[2], mean_silhouettes, threshold)
+        mean_silhouettes = np.mean(silhouette_per_sample[-1]).round(3)
+        fig, ax = plot_silhouette(clusters, silhouette_per_sample[-1], mean_silhouettes, threshold)
         fig.savefig(silhouettes_file, dpi=300, transparent=True, bbox_inches='tight')
     
     return hist_file, silhouettes_file
