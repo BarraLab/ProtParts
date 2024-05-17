@@ -197,7 +197,7 @@ class Cluster:
         data_list = list(self.index().keys())
         data_label = list(self.index().values())
 
-        if len(self.clusters) == 1:
+        if len(self.clusters) == 1 or len(self.clusters) == len(data_list):
             return None, (data_list, data_label, None)
         else:
             pivot = np.ones((len(data_list), len(data_list))) * 11
@@ -209,6 +209,7 @@ class Cluster:
                     j = data_dict[seq2]
                     pivot[i, j] = measure
             
+            np.fill_diagonal(pivot, 0)
             sample_silhouette_values = silhouette_samples(pivot, data_label, metric='precomputed')
             metric = np.mean(sample_silhouette_values)
 
