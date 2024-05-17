@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import seaborn as sns
 import os
+import pandas as pd
+import numpy as np
 from string import Template
 
 def read_seq(seq_file):
@@ -45,7 +47,7 @@ def read_blastp(blastp_file):
     Returns
     -------
     measurement : tuple
-        List of measurement (seq1, seq2, measurement)
+        List of measurement (seq1, seq2, evalue, nident, qlen, slen)
     """
     measurement = []
     first_hit = set()
@@ -56,7 +58,7 @@ def read_blastp(blastp_file):
                 continue
             else:
                 first_hit.add((line[0], line[1]))
-                measurement.append((line[0], line[1], float(line[10])))
+                measurement.append((line[0], line[1], float(line[2]), float(line[3]), float(line[4]), float(line[5])))
     return measurement
 
 
@@ -454,3 +456,56 @@ def plot_sizebar(size_thres_dict, max_partition_size, output_dir):
     fig.savefig(os.path.join(output_dir, 'size_bar.png'), dpi=300, transparent=True, bbox_inches='tight')
 
     return os.path.join(output_dir, 'size_bar.png')
+
+
+def draw_scatter_histogram(measurement, sequences, output_dir):
+    """
+    Draw scatter plot and histogram of measurement
+
+    Parameters
+    ----------
+    measurement : tuple
+        List of measurement (seq1, seq2, evalue, nident, qlen, slen)
+    sequences : dict
+        Dict of sequences
+    output_dir : str
+        Path to output directory
+    
+    Returns
+    -------
+    output_file : str
+        Path to output file
+    """
+    
+    df_measurement = pd.DataFrame(measurement, columns=['qseqid', 'sseqid', 'evalue', 'nident', 'qlen', 'slen'])
+    df_measurement = df_measurement.drop_duplicates(['qseqid', 'sseqid'], keep='first')
+    df_measurement = df_measurement[df_measurement['qseqid'] <= df_measurement['sseqid']]
+    df_measurement['npid'] = df_measurement['nident'] / df_measurement[['qlen', 'slen']].min(axis=1)
+    df_measurement['evalue'] = df_measurement['evalue'].replace(0, 1e-180)
+    df_measurement['nloge'] = -np.log10(df_measurement['evalue'])
+    df_measurement['sqlen_category'] = pd.cut(df_measurement[['qlen', 'slen']].min(axis=1), bins=[0, 100, 200, 300, 1000], labels=["<100", "100-200", "200-300", ">300"])
+    df_measurement.to_csv(os.path.join(output_dir, 'measurement.csv'), index=False)
+
+    color_palette = sns.cubehelix_palette(4)
+    
+    # Initialize the JointGrid
+    g = sns.JointGrid(x='npid', y='nloge', data=df_measurement, hue='sqlen_category', height=8)
+    # g = sns.JointGrid(x=measurement_T[3], y=measurement_T[2], hue=qlen_categories, height=8)
+
+    # Plot a scatter plot in the center
+    g.plot_joint(sns.scatterplot, alpha=0.5, palette=color_palette)
+
+    # Plot histograms on the margins
+    g.plot_marginals(sns.histplot, palette=color_palette, kde=False)
+    g.plot_marginals(sns.histplot, palette=color_palette, kde=False)
+
+    # change the labels
+    g.set_axis_labels('Normalized percentage identity', 'Negative log10 E-value')
+
+    # change the legend title
+    g.ax_joint.legend(loc='upper left', title='Shorter query length')
+
+    output_file = os.path.join(output_dir, 'scatter_evalue.png')
+    plt.savefig(output_file, dpi=300, transparent=True, bbox_inches='tight')
+
+    return output_file

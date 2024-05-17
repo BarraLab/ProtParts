@@ -2,7 +2,7 @@ from .Clustering import Clustering
 from .Measure import Measure
 from .Partitioning import Partitioning
 from .Report import Report
-from .utils import read_seq, write_partition, write_cluster, hobohm1, init_logging, remove_duplicate, draw_figures, plot_sizebar #create_report
+from .utils import read_seq, write_partition, write_cluster, hobohm1, init_logging, remove_duplicate, draw_figures, plot_sizebar, draw_scatter_histogram
 from .settings import MAKEBLASTDB_EXEC, BLASTP_EXEC, TMP_DIR
 import zipfile
 import os
@@ -160,6 +160,10 @@ def clust_partition(args):
         logger.debug("Drawing figures...")
         hist_file, silhouette_file = draw_figures(cluster, measurement, output_dir, threshold=t_c)
         file_results.append([t_c, hist_file, silhouette_file, output_file])
+    
+    # draw the scatter plot and histogram
+    scatter_file = draw_scatter_histogram(measurement, measurement, output_dir)
+    file_results[-1].append(scatter_file)
 
     if only_partition and have_partition:
         logger.debug("Drawing size bar...")

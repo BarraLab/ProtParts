@@ -114,16 +114,16 @@ class Report():
         with open('template/analysis.html', 'r') as f:
             template = Template(f.read())
 
-        if len(figures[-1]) == 5:
-            html_figure = f"""
-            <div class="grid">
+        html_figure = f"""
+        <div class="grid">
             <figure>
-            <h3>Maximum cluster size at different thresholds</h3>
-            <img src="{figures[-1][4]}" alt="Barplot of max cluster size">
+                <h3>Correlation of negative log E-value (nlogE) and normalized percentage of identity (NPID)</h3>
+                <img src="{figures[-1][4]}" alt="Scatterplot and histogram of nlogE and NPID">
             </figure>
-            </div>\n
-            """
-            self.report += html_figure
+            {'<figure><h3>Maximum cluster size at different thresholds</h3><img src="' + figures[-1][5] + '" alt="Barplot of max cluster size"></figure>' if len(figures[-1]) == 6 else ''}
+        </div>\n
+        """
+        self.report += html_figure
         
         for figs in figures:
             threshold = figs[0]
