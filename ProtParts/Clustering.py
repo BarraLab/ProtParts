@@ -202,7 +202,8 @@ class Cluster:
         else:
             pivot = np.ones((len(data_list), len(data_list))) * 11
             data_dict = dict(zip(data_list, range(len(data_list))))
-            for seq1, seq2, measure in measurement:
+            for row in measurement:
+                seq1, seq2, measure = row[0], row[1], row[2]
                 if (seq1 in data_dict) and (seq2 in data_dict):
                     i = data_dict[seq1]
                     j = data_dict[seq2]
@@ -305,7 +306,9 @@ class Clustering:
         G.add_nodes_from(nodes)
 
         # filter out self-self measurement and based on threshold
-        measurement = list(filter(lambda x:(x[0] != x[1]) and (x[0] in sequences) and (x[1] in sequences) and (op(x[2], self.threshold)), measurement))
+        #measurement = list(filter(lambda x:(x[0] != x[1]) and (x[0] in sequences) and (x[1] in sequences) and (op(x[2], self.threshold)), measurement))
+        # select the first three columns of the measurement
+        measurement = [(x[0], x[1], x[2]) for x in measurement if (x[0] != x[1]) and (x[0] in sequences) and (x[1] in sequences) and (op(x[2], self.threshold))]
         
         # add edges
         G.add_weighted_edges_from(measurement)

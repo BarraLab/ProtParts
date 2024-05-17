@@ -51,7 +51,7 @@ class Measure:
         for key, value in kwargs.items():
             arglist.append('-' + key)
             arglist.append(str(value))
-        cmd = [blastp_exec, "-query", tmp_seq_file, "-db", tmp_db_file, "-out", tmp_blast_file, "-outfmt", "6"] + arglist
+        cmd = [blastp_exec, "-query", tmp_seq_file, "-db", tmp_db_file, "-out", tmp_blast_file, "-outfmt", "6 qseqid sseqid evalue nident qlen slen"] + arglist
         # Run blastp without stdout
         subprocess.run(cmd, shell=False, stdout=subprocess.DEVNULL) 
         
